@@ -836,13 +836,15 @@
   self: i1e_backward(grad, self, result)
   result: auto_element_wise
 
+# Avoid 0 * log(0) at self=1, other=0. Mask before log so double backward
+# also avoids division by zero in the derivative of log.
 - name: igamma(Tensor self, Tensor other) -> Tensor
   self: 'not_implemented("igamma: input")'
-  other: grad * exp((self - 1) * log(other) - other - lgamma(self))
+  other: grad * exp((self - 1) * log(other.masked_fill((self == 1) & (other == 0), 1)) - other - lgamma(self))
 
 - name: igammac(Tensor self, Tensor other) -> Tensor
   self: 'not_implemented("igammac: input")'
-  other: -grad * exp((self - 1) * log(other) - other - lgamma(self))
+  other: -grad * exp((self - 1) * log(other.masked_fill((self == 1) & (other == 0), 1)) - other - lgamma(self))
 
 - name: index.Tensor(Tensor self, Tensor?[] indices) -> Tensor
   self: index_backward(grad.new_zeros_symint(self.sym_sizes(), self.options()), indices, grad)
